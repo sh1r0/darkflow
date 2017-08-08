@@ -106,12 +106,19 @@ def return_predict(self, im):
 def predict(self):
     use_var = self.FLAGS.use_var
 
-    inp_path = self.FLAGS.imgdir
-    all_inps = os.listdir(inp_path)
-    all_inps = [i for i in all_inps if self.framework.is_inp(i)]
-    if not all_inps:
-        msg = 'Failed to find any images in {} .'
-        exit('Error: {}'.format(msg.format(inp_path)))
+    if self.FLAGS.imglist:
+        with open(self.FLAGS.imglist) as f:
+            all_inps = f.read().splitlines()
+    else:
+        inp_path = self.FLAGS.imgdir
+        all_inps = os.listdir(inp_path)
+        all_inps = [
+            os.path.join(inp_path, i) for i in all_inps
+            if self.framework.is_inp(i)
+        ]
+        if not all_inps:
+            msg = 'Failed to find any images in {} .'
+            exit('Error: {}'.format(msg.format(inp_path)))
 
     batch = min(self.FLAGS.batch, len(all_inps))
 
@@ -127,8 +134,7 @@ def predict(self):
         this_batch = all_inps[from_idx:to_idx]
         for inp in this_batch:
             new_all += [inp]
-            this_inp = os.path.join(inp_path, inp)
-            this_inp = self.framework.preprocess(this_inp)
+            this_inp = self.framework.preprocess(inp)
             expanded = np.expand_dims(this_inp, 0)
             inp_feed.append(expanded)
         this_batch = new_all
@@ -139,9 +145,7 @@ def predict(self):
         else:
             feed_dict = None
             assign_op = tf.assign(
-                self.inp,
-                np.concatenate(inp_feed, 0),
-                validate_shape=False)
+                self.inp, np.concatenate(inp_feed, 0), validate_shape=False)
             self.sess.run(assign_op)
         self.say('Forwarding {} inputs ...'.format(len(inp_feed)))
         start = time.time()
@@ -155,8 +159,7 @@ def predict(self):
         self.say('Post processing {} inputs ...'.format(len(inp_feed)))
         start = time.time()
         pool.map(lambda p: (lambda i, prediction: self.framework.postprocess(
-            prediction, os.path.join(inp_path, this_batch[i])))(*p),
-                 enumerate(out))
+            prediction, this_batch[i]))(*p), enumerate(out))
         stop = time.time()
         last = stop - start
 
