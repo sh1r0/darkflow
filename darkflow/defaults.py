@@ -53,6 +53,7 @@ class argHandler(dict):
             'metaLoad', '',
             'path to .meta file generated during --savepb that corresponds to '
             '.pb file')
+        self.define('use_var', False, 'Use tf.Variable as input')
 
     def define(self, argName, default, description):
         self[argName] = default

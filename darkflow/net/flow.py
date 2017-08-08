@@ -5,6 +5,7 @@ import time
 from multiprocessing.pool import ThreadPool
 
 import numpy as np
+import tensorflow as tf
 
 train_stats = ('Training statistics: \n'
                '\tLearning rate : {}\n'
@@ -103,6 +104,8 @@ def return_predict(self, im):
 
 
 def predict(self):
+    use_var = self.FLAGS.use_var
+
     inp_path = self.FLAGS.imgdir
     all_inps = os.listdir(inp_path)
     all_inps = [i for i in all_inps if self.framework.is_inp(i)]
@@ -131,10 +134,18 @@ def predict(self):
         this_batch = new_all
 
         # Feed to the net
-        feed_dict = {self.inp: np.concatenate(inp_feed, 0)}
+        if not use_var:
+            feed_dict = {self.inp: np.concatenate(inp_feed, 0)}
+        else:
+            feed_dict = None
+            assign_op = tf.assign(
+                self.inp,
+                np.concatenate(inp_feed, 0),
+                validate_shape=False)
+            self.sess.run(assign_op)
         self.say('Forwarding {} inputs ...'.format(len(inp_feed)))
         start = time.time()
-        out = self.sess.run(self.out, feed_dict)
+        out = self.sess.run(self.out, feed_dict=feed_dict)
         stop = time.time()
         last = stop - start
         self.say('Total time = {}s / {} inps = {} ips'.format(

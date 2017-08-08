@@ -2,6 +2,7 @@ import json
 import os
 import time
 
+import numpy as np
 import tensorflow as tf
 
 from . import flow, help
@@ -95,9 +96,18 @@ class TFNet(object):
         self.setup_meta_ops()
 
     def build_forward(self):
+        use_var = self.FLAGS.use_var
+
         # Placeholders
         inp_size = [None] + self.meta['inp_size']
-        self.inp = tf.placeholder(tf.float32, inp_size, 'input')
+        if not use_var:
+            dtype = tf.float16 if self.FLAGS.use_fp16 else tf.float32
+            self.inp = tf.placeholder(dtype, inp_size, 'input')
+        else:
+            dtype = np.float16 if self.FLAGS.use_fp16 else np.float32
+            self.inp = tf.Variable(
+                np.zeros([1] + self.meta['inp_size'], dtype=dtype),
+                trainable=False)
         self.feed = dict()  # other placeholders
 
         # Build the forward pass
