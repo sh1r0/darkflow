@@ -17,10 +17,11 @@ class loader(object):
         'extract', 'conv-extract'
     ]
 
-    def __init__(self, *args):
+    def __init__(self, path, cfg=None, use_fp16=False):
         self.src_key = list()
         self.vals = list()
-        self.load(*args)
+        self.use_fp16 = use_fp16
+        self.load(path, cfg)
 
     def __call__(self, key):
         for idx in range(len(key)):
@@ -61,7 +62,7 @@ class weights_loader(loader):
 
     def load(self, path, src_layers):
         self.src_layers = src_layers
-        walker = weights_walker(path)
+        walker = weights_walker(path, use_fp16=self.use_fp16)
 
         for i, layer in enumerate(src_layers):
             if layer.type not in self.VAR_LAYER:
@@ -110,7 +111,7 @@ class checkpoint_loader(loader):
                     self.vals += [var.eval(sess)]
 
 
-def create_loader(path, cfg=None):
+def create_loader(path, cfg=None, use_fp16=False):
     if path is None:
         load_type = weights_loader
     elif '.weights' in path:
@@ -118,15 +119,16 @@ def create_loader(path, cfg=None):
     else:
         load_type = checkpoint_loader
 
-    return load_type(path, cfg)
+    return load_type(path, cfg, use_fp16=use_fp16)
 
 
 class weights_walker(object):
     """incremental reader of float32 binary files"""
 
-    def __init__(self, path):
+    def __init__(self, path, use_fp16=False):
         self.eof = False  # end of file
         self.path = path  # current pos
+        self.use_fp16 = use_fp16
         if path is None:
             self.eof = True
             return
@@ -144,12 +146,13 @@ class weights_walker(object):
         assert end_point <= self.size, \
             'Over-read {}'.format(self.path)
 
+        dtype = np.float16 if self.use_fp16 else np.float32
         float32_1D_array = np.memmap(
             self.path,
             shape=(),
             mode='r',
             offset=self.offset,
-            dtype='({})float32,'.format(size))
+            dtype='({})float32,'.format(size)).astype(dtype)
 
         self.offset = end_point
         if end_point == self.size:

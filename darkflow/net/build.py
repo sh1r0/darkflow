@@ -2,7 +2,6 @@ import json
 import os
 import time
 
-import numpy as np
 import tensorflow as tf
 
 from . import flow, help
@@ -97,16 +96,16 @@ class TFNet(object):
 
     def build_forward(self):
         use_var = self.FLAGS.use_var
+        use_fp16 = self.FLAGS.use_fp16
 
         # Placeholders
         inp_size = [None] + self.meta['inp_size']
+        dtype = tf.float16 if self.FLAGS.use_fp16 else tf.float32
         if not use_var:
-            dtype = tf.float16 if self.FLAGS.use_fp16 else tf.float32
             self.inp = tf.placeholder(dtype, inp_size, 'input')
         else:
-            dtype = np.float16 if self.FLAGS.use_fp16 else np.float32
             self.inp = tf.Variable(
-                np.zeros([1] + self.meta['inp_size'], dtype=dtype),
+                tf.zeros([1] + self.meta['inp_size'], dtype=dtype),
                 trainable=False)
         self.feed = dict()  # other placeholders
 
@@ -115,8 +114,8 @@ class TFNet(object):
         roof = self.num_layer - self.ntrain
         self.say(HEADER, LINE)
         for i, layer in enumerate(self.darknet.layers):
-            args = [layer, state, i, roof, self.feed]
-            state = op_create(*args)
+            state = op_create(
+                layer, state, i, roof, self.feed, use_fp16=use_fp16)
             mess = state.verbalise()
             self.say(mess)
         self.say(LINE)

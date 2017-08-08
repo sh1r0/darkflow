@@ -105,6 +105,7 @@ def return_predict(self, im):
 
 def predict(self):
     use_var = self.FLAGS.use_var
+    dtype = np.float16 if self.FLAGS.use_fp16 else np.float32
 
     if self.FLAGS.imglist:
         with open(self.FLAGS.imglist) as f:
@@ -134,7 +135,7 @@ def predict(self):
         this_batch = all_inps[from_idx:to_idx]
         for inp in this_batch:
             new_all += [inp]
-            this_inp = self.framework.preprocess(inp)
+            this_inp = self.framework.preprocess(inp).astype(dtype)
             expanded = np.expand_dims(this_inp, 0)
             inp_feed.append(expanded)
         this_batch = new_all
@@ -159,7 +160,7 @@ def predict(self):
         self.say('Post processing {} inputs ...'.format(len(inp_feed)))
         start = time.time()
         pool.map(lambda p: (lambda i, prediction: self.framework.postprocess(
-            prediction, this_batch[i]))(*p), enumerate(out))
+            prediction, this_batch[i]))(*p), enumerate(out.astype(dtype)))
         stop = time.time()
         last = stop - start
 

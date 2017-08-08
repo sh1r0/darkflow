@@ -24,6 +24,5 @@ op_types = {
 }
 
 
-def op_create(*args):
-    layer_type = list(args)[0].type
-    return op_types[layer_type](*args)
+def op_create(layer, inp, num, roof, feed, use_fp16=False):
+    return op_types[layer.type](layer, inp, num, roof, feed, use_fp16=use_fp16)

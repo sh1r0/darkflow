@@ -26,7 +26,7 @@ class Darknet(object):
             des_parsed = self.parse_cfg(FLAGS.model, FLAGS)
             self.meta, self.layers = des_parsed
 
-        self.load_weights()
+        self.load_weights(FLAGS.use_fp16)
 
     def get_weight_src(self, FLAGS):
         """
@@ -78,15 +78,15 @@ class Darknet(object):
             layers.append(new)
         return meta, layers
 
-    def load_weights(self):
+    def load_weights(self, use_fp16=False):
         """
         Use `layers` and Loader to load .weights file
         """
         print('Loading {} ...'.format(self.src_bin))
         start = time.time()
 
-        args = [self.src_bin, self.src_layers]
-        wgts_loader = loader.create_loader(*args)
+        wgts_loader = loader.create_loader(
+            self.src_bin, cfg=self.src_layers, use_fp16=use_fp16)
         for layer in self.layers:
             layer.load(wgts_loader)
 

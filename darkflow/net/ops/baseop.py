@@ -28,11 +28,12 @@ class BaseOp(object):
     # let slim take care of the following vars
     _SLIM = ['gamma', 'moving_mean', 'moving_variance']
 
-    def __init__(self, layer, inp, num, roof, feed):
+    def __init__(self, layer, inp, num, roof, feed, use_fp16=False):
         self.inp = inp  # BaseOp
         self.num = num  # int
         self.out = None  # tf.Tensor
         self.lay = layer
+        self.use_fp16 = use_fp16
 
         self.scope = '{}-{}'.format(str(self.num), self.lay.type)
         self.gap = roof - self.num
@@ -54,6 +55,7 @@ class BaseOp(object):
 
     def wrap_variable(self, var):
         """wrap layer.w into variables"""
+        dtype = np.float16 if self.use_fp16 else np.float32
         val = self.lay.w.get(var, None)
         if val is None:
             shape = self.lay.wshape[var]
@@ -64,7 +66,7 @@ class BaseOp(object):
                 val = np.ones(shape)
             else:
                 val = np.random.normal(*args)
-            self.lay.w[var] = val.astype(np.float32)
+            self.lay.w[var] = val.astype(dtype)
             self.act = 'Init '
         if not self.var:
             return
@@ -77,7 +79,7 @@ class BaseOp(object):
             self.lay.w[var] = tf.get_variable(
                 var,
                 shape=self.lay.wshape[var],
-                dtype=tf.float32,
+                dtype=dtype,
                 initializer=self.lay.w[var])
 
     def wrap_pholder(self, ph, feed):

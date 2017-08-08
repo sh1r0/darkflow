@@ -50,6 +50,7 @@ def say(self, *msgs):
 
 
 def load_old_graph(self, ckpt):
+    dtype = tf.float16 if self.FLAGS.use_fp16 else tf.float32
     ckpt_loader = create_loader(ckpt)
     self.say(old_graph_msg.format(ckpt))
 
@@ -60,7 +61,7 @@ def load_old_graph(self, ckpt):
         assert val is not None, \
             'Cannot find and load {}'.format(var.name)
         shp = val.shape
-        plh = tf.placeholder(tf.float32, shp)
+        plh = tf.placeholder(dtype, shp)
         op = tf.assign(var, plh)
         self.sess.run(op, {plh: val})
 
